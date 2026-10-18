@@ -295,7 +295,9 @@ export function registerAccountHandlers(): void {
       for (const acc of accounts) deleteCredentials(acc.email);
       deleteCredentials("__staging__");
 
-      for (const file of ["accounts.json", "settings.json"]) {
+      // license.enc is the cached Pro license an upstream build may have left
+      // in this profile. This fork never reads it, but a full wipe removes it.
+      for (const file of ["accounts.json", "settings.json", "license.enc"]) {
         const filePath = join(userData, file);
         if (existsSync(filePath)) unlinkSync(filePath);
       }
