@@ -1,4 +1,3 @@
-jest.mock("../main/services/settings", () => ({ getLicenseStatus: jest.fn(() => ({ active: true })), PRO_REQUIRED_MESSAGE: "Pro required" }));
 const mockReconnectDb = jest.fn();
 const mockWithAccountDbReadConnection = jest.fn((_path: string, read: (database: unknown) => unknown) =>
   read({}),
@@ -91,18 +90,4 @@ describe("MCP mailbox actions", () => {
       "belongs to another mailbox",
     );
   });
-});
-
-
-it("revokes both MCP permission levels immediately from local entitlement state", async () => {
-  const { getLicenseStatus } = await import("../main/services/settings");
-  const { hasReadAccess, hasWriteAccess, readAccessError, writeAccessError } = await import("./runtime");
-  expect(hasReadAccess()).toBe(true);
-  expect(hasWriteAccess()).toBe(true);
-  jest.mocked(getLicenseStatus).mockReturnValue({ active: false });
-  expect(hasReadAccess()).toBe(false);
-  expect(hasWriteAccess()).toBe(false);
-  expect(readAccessError().content[0].text).toBe("Pro required");
-  expect(writeAccessError().content[0].text).toBe("Pro required");
-  expect(() => initializePaperweight()).toThrow("Pro required");
 });

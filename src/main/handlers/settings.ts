@@ -1,11 +1,9 @@
 import { handle } from "./access";
 import { ipcMain, shell } from "electron";
 import { IPC } from "@shared/ipc";
-import { isLicenseKey, isString } from "@shared/validation";
+import { isString } from "@shared/validation";
 import {
-  activateLicense,
   applyAutoLaunch,
-  deleteLicense,
   getLicenseStatus,
   getMcpSetup,
   requirePro,
@@ -13,24 +11,12 @@ import {
 import { saveSetting } from "../services/settings";
 import { getGlobalSetting, saveGlobalSetting } from "../services/globalSettings";
 import { buildAppSettings } from "../services/appSettings";
-import { startAllSyncs } from "../sync-manager";
 import { dataLog } from "../utils/log";
 
 export function registerSettingsHandlers(): void {
   // --- License ---
 
-  handle(IPC.activateLicense, async (_event, key: unknown) => {
-    if (!isLicenseKey(key)) throw new Error("Invalid license key");
-    const status = await activateLicense(key);
-    if (status.active) startAllSyncs();
-    return status;
-  });
-
   handle(IPC.getLicenseStatus, () => getLicenseStatus());
-
-  handle(IPC.deactivateLicense, () => {
-    deleteLicense();
-  });
 
   // --- App settings ---
 

@@ -11,8 +11,6 @@ export const APP_CONFIG = {
   OWNER_NAME: "Paperweight",
   SOCIAL_TWITTER: "wslyvh",
   CONTACT_EMAIL: "hello@paperweight.email",
-
-  LICENSE_API_URL: "https://www.paperweight.email/api/license",
 };
 
 // Public webmail and ISP domains live in @paperweight/analysis — the engine

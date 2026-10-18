@@ -5,7 +5,7 @@ import { autoUpdater } from "electron-updater";
 import { registerIpcHandlers } from "./ipc";
 import { startAllSyncs } from "./sync-manager";
 import { APP_CONFIG } from "@shared/config";
-import { applyAutoLaunch, wasLaunchedAsHidden, hasValidLicense } from "./services/settings";
+import { applyAutoLaunch, wasLaunchedAsHidden } from "./services/settings";
 import { getGlobalSetting } from "./services/globalSettings";
 import { initDb } from "./db";
 import { appLog } from "./utils/log";
@@ -143,10 +143,6 @@ app.whenReady().then(async () => {
   ipcMain.handle(IPC.getLastUpdateInfo, () => lastUpdateInfo);
   ipcMain.handle(IPC.installUpdate, () => autoUpdater.quitAndInstall());
 
-  void hasValidLicense().catch((err) => {
-    appLog.error("License validation failed:", err instanceof Error ? err.message : String(err));
-  });
-
   // Ensure OS login item state matches saved settings
   const autoLaunch = getGlobalSetting("autoLaunch") ?? false;
   const launchMinimized = getGlobalSetting("launchMinimized") ?? false;
@@ -200,9 +196,7 @@ app.whenReady().then(async () => {
     // Background sync every 20 minutes — picks up any accounts whose worker has finished
     appLog.info("Background sync interval set (20 min)");
     setInterval(() => {
-      void hasValidLicense().then(() => {
-        startAllSyncs();
-      }).catch(() => appLog.error("Could not refresh account access"));
+      startAllSyncs();
     }, 20 * 60 * 1000);
   }
 

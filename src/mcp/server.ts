@@ -8,9 +8,6 @@ import { registerCompanyTools } from "./tools/companies";
 import { registerMailboxTools } from "./tools/mailboxes";
 import { registerPersonalDataTools } from "./tools/personalData";
 
-import { hasValidLicense, PRO_REQUIRED_MESSAGE } from "../main/services/settings";
-import { McpStartupError } from "./runtime";
-
 export { McpStartupError } from "./runtime";
 
 function createServer(includeWrites: boolean): McpServer {
@@ -28,7 +25,6 @@ function createServer(includeWrites: boolean): McpServer {
 }
 
 export async function runMcpServer(onClose?: () => void): Promise<void> {
-  if (!await hasValidLicense()) throw new McpStartupError(PRO_REQUIRED_MESSAGE);
   initializePaperweight();
   await new Promise<void>((resolve) => {
     serveStdio(() => {

@@ -1,14 +1,12 @@
 import { join } from "path";
-import { writeFileSync, readFileSync, unlinkSync, mkdirSync, existsSync } from "fs";
+import { writeFileSync, unlinkSync, mkdirSync, existsSync } from "fs";
 import { getDb } from "../db";
-import { APP_CONFIG } from "@shared/config";
-import type { LicenseTier, LicenseStatus, McpSetup, WhitelistEntry } from "@shared/types";
-import { licenseLog } from "../utils/log";
+import type { LicenseStatus, McpSetup, WhitelistEntry } from "@shared/types";
 
 export const PRO_REQUIRED_MESSAGE = "Paperweight Pro is required. Upgrade in Settings to continue.";
 
 export function requirePro(): void {
-  if (!getLicenseStatus().active) throw new Error(PRO_REQUIRED_MESSAGE);
+  // No-op: this fork has no Pro gate.
 }
 
 // --- Key-value settings ---
@@ -126,211 +124,15 @@ export function getMcpSetup(): McpSetup {
 }
 
 // --- License ---
-
-// Read old cached licenses and responses without exposing legacy deal labels.
-type StoredLicenseTier = LicenseTier | "annual" | "test";
-
-function normalizeLicenseTier(tier: StoredLicenseTier): LicenseTier {
-  return tier === "annual" || tier === "test" ? "pro" : tier;
-}
-
-interface LicenseInfo {
-  key: string;
-  expiresAt?: string;
-  validatedAt: number;
-  tier: StoredLicenseTier;
-  portalUrl?: string;
-}
-
-const VALIDATION_CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
-const VALIDATION_TIMEOUT_MS = 8_000;
-
-function getLicensePath(): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { app } = require("electron") as typeof import("electron");
-  return join(app.getPath("userData"), "license.enc");
-}
-
-function saveLicense(info: LicenseInfo) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { safeStorage } = require("electron") as typeof import("electron");
-  const json = JSON.stringify(info);
-  if (safeStorage.isEncryptionAvailable()) {
-    const encrypted = safeStorage.encryptString(json);
-    writeFileSync(getLicensePath(), encrypted);
-  } else {
-    writeFileSync(getLicensePath(), json, "utf-8");
-  }
-}
-
-function loadLicense(): LicenseInfo | undefined {
-  const path = getLicensePath();
-  if (!existsSync(path)) return undefined;
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { safeStorage } = require("electron") as typeof import("electron");
-    const data = readFileSync(path);
-    if (safeStorage.isEncryptionAvailable()) {
-      const json = safeStorage.decryptString(data);
-      return JSON.parse(json) as LicenseInfo;
-    } else {
-      return JSON.parse(data.toString("utf-8")) as LicenseInfo;
-    }
-  } catch {
-    return undefined;
-  }
-}
-
-export function deleteLicense() {
-  licenseLog.info("License deactivated");
-  const path = getLicensePath();
-  if (existsSync(path)) {
-    unlinkSync(path);
-  }
-}
-
-function isExpired(info: LicenseInfo): boolean {
-  if (!info.expiresAt) return false;
-  return !(new Date(info.expiresAt).getTime() > Date.now());
-}
-
-async function validateLicenseKey(
-  key: string,
-) {
-  const body = JSON.stringify({ key });
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { net } = require("electron") as typeof import("electron");
-  const controller = new AbortController();
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  const timedOut = new Promise<never>((_, reject) => {
-    timeout = setTimeout(() => {
-      controller.abort();
-      reject(new Error("License validation timed out"));
-    }, VALIDATION_TIMEOUT_MS);
-  });
-  try {
-    const response = await Promise.race([
-      net.fetch(APP_CONFIG.LICENSE_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        signal: controller.signal,
-      }),
-      timedOut,
-    ]);
-
-    if (!response.ok) {
-      // Invalid keys are normal 200 responses with valid:false. Service failures
-      // must preserve the cached key so a temporary outage cannot remove it.
-      throw new Error(`License validation unavailable (${response.status})`);
-    }
-
-    const result = await Promise.race([
-      response.json() as Promise<{
-        valid: boolean;
-        tier?: StoredLicenseTier;
-        expiresAt?: string;
-        portalUrl?: string;
-      }>,
-      timedOut,
-    ]);
-    if (result?.valid === false) return { valid: false as const };
-    if (
-      result?.valid !== true ||
-      !result.tier ||
-      !["pro", "cleanup", "lifetime", "annual", "test"].includes(result.tier) ||
-      (result.expiresAt !== undefined &&
-        (typeof result.expiresAt !== "string" || !Number.isFinite(Date.parse(result.expiresAt)))) ||
-      (result.tier === "cleanup" && !result.expiresAt)
-    ) {
-      throw new Error("Invalid license response");
-    }
-    return { ...result, valid: true as const, tier: normalizeLicenseTier(result.tier) };
-  } finally {
-    if (timeout) clearTimeout(timeout);
-  }
-}
-
-export async function activateLicense(key: string): Promise<LicenseStatus> {
-  const result = await validateLicenseKey(key);
-
-  if (!result.valid) {
-    licenseLog.info("License activation failed (invalid key)");
-    return { active: false };
-  }
-
-  const info: LicenseInfo = {
-    key,
-    expiresAt: result.expiresAt,
-    validatedAt: Date.now(),
-    tier: result.tier,
-    portalUrl: result.portalUrl,
-  };
-  saveLicense(info);
-
-  licenseLog.info(`License activated (tier: ${info.tier})`);
-  return {
-    active: true,
-    tier: normalizeLicenseTier(info.tier),
-    expiresAt: info.expiresAt,
-    key,
-    portalUrl: info.portalUrl,
-  };
-}
+//
+// This fork ships without a paywall. Every feature the upstream project gates
+// behind Paperweight Pro is available, and the app never contacts a license
+// server. The exported names are kept so callers stay unchanged.
 
 export function getLicenseStatus(): LicenseStatus {
-  const info = loadLicense();
-  if (!info) return { active: false };
-
-  if (isExpired(info)) {
-    return { active: false, key: info.key };
-  }
-
-  return {
-    active: true,
-    tier: normalizeLicenseTier(info.tier),
-    expiresAt: info.expiresAt,
-    key: info.key,
-    portalUrl: info.portalUrl,
-  };
+  return { active: true, tier: "lifetime" };
 }
 
 export async function hasValidLicense(): Promise<boolean> {
-  const info = loadLicense();
-  if (!info) return false;
-
-  const cacheAge = Date.now() - info.validatedAt;
-
-  if (cacheAge < VALIDATION_CACHE_MS && !isExpired(info)) {
-    return true;
-  }
-
-  try {
-    const result = await validateLicenseKey(info.key);
-    const current = loadLicense();
-    if (!current || current.key !== info.key) {
-      return current ? !isExpired(current) : false;
-    }
-    if (!result.valid) {
-      licenseLog.info("License validation: invalid (remote)");
-      deleteLicense();
-      return false;
-    }
-    const updated: LicenseInfo = {
-      ...current,
-      validatedAt: Date.now(),
-      expiresAt: result.expiresAt,
-      tier: result.tier,
-      portalUrl: result.portalUrl ?? current.portalUrl,
-    };
-    saveLicense(updated);
-    const valid = !isExpired(updated);
-    licenseLog.info(`License validation (remote): ${valid ? "valid" : "expired"}, tier: ${updated.tier}`);
-    return valid;
-  } catch (err) {
-    // Offline or timed out — fall back to local expiration check
-    licenseLog.error("License validation network error:", err instanceof Error ? err.message : String(err));
-    return !isExpired(info);
-  }
+  return true;
 }
