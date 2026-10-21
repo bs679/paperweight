@@ -77,9 +77,7 @@ export const IPC = {
   markMessageAsSpam: "mark-message-as-spam",
   markMessageAsRead: "mark-message-as-read",
   getEmailConnection: "get-email-connection",
-  activateLicense: "activate-license",
   getLicenseStatus: "get-license-status",
-  deactivateLicense: "deactivate-license",
   getSupportInfo: "get-support-info",
   getStorageBreakdown: "get-storage-breakdown",
   readLogFile: "read-log-file",
@@ -175,9 +173,7 @@ export interface ElectronAPI {
   markMessageAsSpam: (messageId: string) => Promise<void>;
   markMessageAsRead: (messageId: string, isRead: boolean) => Promise<void>;
   getEmailConnection: () => Promise<EmailConnection | null>;
-  activateLicense: (key: string) => Promise<LicenseStatus>;
   getLicenseStatus: () => Promise<LicenseStatus>;
-  deactivateLicense: () => Promise<void>;
   getSupportInfo: () => Promise<SupportInfo>;
   getStorageBreakdown: () => Promise<StorageBreakdown>;
   readLogFile: () => Promise<string>;

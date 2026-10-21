@@ -5,11 +5,9 @@ import type { StorageBreakdown, SupportInfo } from "@shared/types";
 import { formatBytes } from "@shared/formatting";
 import DeviceInfoCard from "../components/DeviceInfoCard";
 import HelpSection from "../components/HelpSection";
-import { useLicense } from "../context/LicenseContext";
 
 export default function Support(): JSX.Element {
   const navigate = useNavigate();
-  const license = useLicense();
   const [info, setInfo] = useState<SupportInfo>();
   const [storage, setStorage] = useState<StorageBreakdown>();
   const [logContent, setLogContent] = useState("");
@@ -75,9 +73,6 @@ export default function Support(): JSX.Element {
               <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
                 <span className="text-base-content/50">Provider</span>
                 <span>{formatProvider(info.providerType)}</span>
-
-                <span className="text-base-content/50">License</span>
-                <span>{license.active ? "Active" : "Free"}</span>
 
                 <span className="text-base-content/50">Messages synced</span>
                 <span>{info.totalMessages.toLocaleString()}</span>

@@ -44,7 +44,7 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
   }
 
   return (
-    <LicenseProvider initialLicense={state.license ?? { active: false }}>
+    <LicenseProvider initialLicense={state.license ?? { active: true }}>
       {children}
     </LicenseProvider>
   );

@@ -39,6 +39,8 @@ IMAP Presets: Proton, Yahoo Mail, Fastmail, Yandex, Zoho, Mailbox.org, Posteo, G
 
 ## License
 
+**This fork has no Pro gate.** Every feature listed below as paid is enabled, the license section is gone from Settings, and the app never contacts the license server. The upstream project is MIT licensed and [its pricing](https://www.paperweight.email/pricing) funds the original author's work; the text below describes upstream's tiers.
+
 Discover, inspect, and curate your digital footprint for free. Upgrade to Pro to execute cleanup and support open-source development.
 
 - **Free**: One email account, full-history sync, account and mailing-list discovery, breach and personal-data overviews, and local curation

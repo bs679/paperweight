@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync, unlinkSync } from "fs";
+import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -18,10 +18,8 @@ jest.mock("electron", () => ({
   shell: { openExternal: jest.fn() },
 }));
 jest.mock("../services/settings", () => ({
-  activateLicense: jest.fn(),
   requirePro: jest.requireActual<typeof import("../services/settings")>("../services/settings").requirePro,
   applyAutoLaunch: jest.fn(),
-  deleteLicense: jest.fn(),
   getLicenseStatus: jest.fn(),
   getMcpSetup: jest.fn(),
   saveSetting: jest.fn(),
@@ -45,24 +43,13 @@ describe("AI Agent access settings", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUserData = mkdtempSync(join(tmpdir(), "paperweight-agent-settings-"));
-    writeFileSync(join(mockUserData, "license.enc"), JSON.stringify({
-      key: "SETTINGS-TEST", tier: "test", validatedAt: Date.now(),
-    }));
     saveSettingsHandler = undefined;
     registerSettingsHandlers();
   });
 
   afterEach(() => rmSync(mockUserData, { recursive: true, force: true }));
 
-  it.each(["read", "actions"])("blocks Free from enabling %s access through the real entitlement guard", (access) => {
-    unlinkSync(join(mockUserData, "license.enc"));
-    expect(() => saveSettingsHandler?.({}, { agentAccess: access, confirmAgentActions: true }))
-      .toThrow("Paperweight Pro is required");
-    expect(saveGlobal).not.toHaveBeenCalled();
-  });
-
-  it("allows Free to revoke agent access", () => {
-    unlinkSync(join(mockUserData, "license.enc"));
+  it("allows revoking agent access", () => {
     getGlobal.mockReturnValue("actions");
     saveSettingsHandler?.({}, { agentAccess: "off" });
     expect(saveGlobal).toHaveBeenCalledWith("agentAccess", "off");

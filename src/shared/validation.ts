@@ -21,7 +21,3 @@ function isDomain(value: unknown): value is string {
 export function isEmailOrDomain(value: unknown): value is string {
   return isEmail(value) || isDomain(value);
 }
-
-export function isLicenseKey(value: unknown): value is string {
-  return isString(value) && value.length > 0 && value.length <= 256;
-}

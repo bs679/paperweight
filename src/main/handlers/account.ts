@@ -31,7 +31,7 @@ import {
   stopAllSyncs,
   stopSync,
 } from "../sync-manager";
-import { getLicenseStatus, deleteLicense } from "../services/settings";
+import { getLicenseStatus } from "../services/settings";
 import { getDashboardStats } from "../services/stats";
 import {
   deleteCredentials,
@@ -138,20 +138,9 @@ export function registerAccountHandlers(): void {
 
   // --- Multi-account management ---
 
-  // Pre-flight license check before the renderer starts an OAuth flow.
-  // Intentionally two-step: this returns immediately so the renderer can show
-  // the license modal inline, then the actual auth IPC (startGmailAuth etc.)
-  // is called separately once the user is cleared to proceed.
-  handle(IPC.addAccount, () => {
-    const existing = listAccounts();
-    if (existing.length >= 1) {
-      const license = getLicenseStatus();
-      if (!license.active) {
-        return { blocked: true, reason: "license_required" };
-      }
-    }
-    return null;
-  });
+  // Pre-flight hook before the renderer starts an OAuth flow. Upstream gates
+  // additional accounts behind Pro here; this fork never blocks.
+  handle(IPC.addAccount, () => null);
 
   ipcMain.on(IPC.listAccounts, (event) => {
     const activeEmail = getActiveEmail();
@@ -306,12 +295,13 @@ export function registerAccountHandlers(): void {
       for (const acc of accounts) deleteCredentials(acc.email);
       deleteCredentials("__staging__");
 
-      for (const file of ["accounts.json", "settings.json"]) {
+      // license.enc is the cached Pro license an upstream build may have left
+      // in this profile. This fork never reads it, but a full wipe removes it.
+      for (const file of ["accounts.json", "settings.json", "license.enc"]) {
         const filePath = join(userData, file);
         if (existsSync(filePath)) unlinkSync(filePath);
       }
 
-      deleteLicense();
       wipeGlobalDatabase();
     } catch {
       throw new Error("Could not wipe all local data. Try again.");
